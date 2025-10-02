@@ -9,31 +9,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Sayfanın temel yazı tipini belirliyoruz */
         body {
             font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        /* Seçili olmayan ve pasif hale getirilen personel kartları için stil */
         .person-item.disabled {
             opacity: 0.5;
             pointer-events: none;
-            background-color: #f3f4f6; /* gray-100 */
+            background-color: #f3f4f6;
         }
-        /* Geçiş efektleri için */
         .transition-all {
             transition: all 0.3s ease-in-out;
         }
-        /* Aktif olarak düzenlenen kişinin ismini vurgulamak için stil */
         .aktif-isim {
-            background-color: #dbeafe; /* blue-100 */
-            color: #1e40af; /* blue-800 */
+            background-color: #dbeafe;
+            color: #1e40af;
             padding: 2px 8px;
             border-radius: 6px;
             display: inline-block;
         }
-        /* Onaylama Modalı Stilleri */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -55,7 +50,6 @@
             width: 400px;
             text-align: center;
         }
-        /* Özel Saat Seçici Stilleri */
         .time-picker-option {
             cursor: pointer;
             padding: 6px 12px;
@@ -63,13 +57,12 @@
             text-align: center;
         }
         .time-picker-option:hover {
-            background-color: #f3f4f6; /* gray-100 */
+            background-color: #f3f4f6;
         }
         .time-picker-option.selected {
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
             color: white;
         }
-        /* Tarayıcının tarih girdisi için bazı stiller */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             opacity: 0.6;
@@ -96,12 +89,12 @@
             <div>
                 <h2 class="text-2xl font-semibold mb-4 text-cyan-700 border-b-2 border-cyan-200 pb-2">İdari Personel</h2>
                 <div id="idari-birim-list" class="space-y-4">
-                    </div>
+                </div>
             </div>
             <div>
                 <h2 class="text-2xl font-semibold mb-4 text-purple-700 border-b-2 border-purple-200 pb-2">Akademik Personel</h2>
                 <div id="akademik-liste" class="space-y-4">
-                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -240,6 +233,7 @@
                 renderLists();
             };
 
+            // DÜZELTİLMİŞ FONKSİYON
             const checkAndUpdateExpiredLeaves = (data) => {
                 const now = new Date();
                 let updated = false;
@@ -248,11 +242,14 @@
                     const personel = data[id];
                     
                     // Saatlik izin kontrolü
-                    if (personel.durum === 'saatlik-izin' && personel.donus) {
-                        const donusSaati = new Date();
+                    if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme) {
+                        // İznin hangi gün için girildiğini guncelleme tarihinden alıyoruz.
+                        const donusSaati = new Date(personel.guncelleme); 
                         const [hours, minutes] = personel.donus.split(':');
+                        // Saati ve dakikayı ayarlıyoruz.
                         donusSaati.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
+                        // Eğer şu anki zaman, izin girilen günün dönüş saatini geçtiyse temizle.
                         if (now > donusSaati) {
                             personel.durum = 'işyerinde';
                             personel.neden = '';
@@ -280,7 +277,8 @@
                 });
 
                 if (updated) {
-                    renderLists();
+                    // Veri güncellendiyse listeyi tekrar render etmeye gerek yok,
+                    // firebase 'on' listener zaten tetiklenecek.
                 }
             };
             
@@ -288,9 +286,15 @@
             personelRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    personelData = Object.values(data);
+                    // Firebase'den gelen veriyi 'id' ile bir nesneye dönüştürüyoruz.
+                    const personelDataObject = {};
+                    Object.values(data).forEach(p => {
+                        personelDataObject[p.id] = p;
+                    });
+                    
+                    personelData = Object.values(personelDataObject);
                     renderLists();
-                    checkAndUpdateExpiredLeaves(data);
+                    checkAndUpdateExpiredLeaves(personelDataObject);
                 } else {
                     // Firebase'de veri yoksa başlangıç verilerini yükle
                     const initialData = getInitialData();
@@ -502,7 +506,14 @@
             
             updateClock();
             setInterval(updateClock, 1000);
-            setInterval(() => checkAndUpdateExpiredLeaves(personelData.reduce((acc, curr) => ({ ...acc, [curr.id]: curr }), {})), 60000);
+            setInterval(() => {
+                // Bu fonksiyonun doğru çalışması için personel verisini 'id' ile erişilebilir bir formatta göndermeliyiz.
+                const personelDataObject = personelData.reduce((acc, curr) => {
+                    acc[curr.id] = curr;
+                    return acc;
+                }, {});
+                checkAndUpdateExpiredLeaves(personelDataObject);
+            }, 60000);
         });
     </script>
 </body>
