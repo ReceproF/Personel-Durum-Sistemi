@@ -233,7 +233,6 @@
                 renderLists();
             };
 
-            // DÜZELTİLMİŞ FONKSİYON
             const checkAndUpdateExpiredLeaves = (data) => {
                 const now = new Date();
                 let updated = false;
@@ -243,13 +242,10 @@
                     
                     // Saatlik izin kontrolü
                     if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme) {
-                        // İznin hangi gün için girildiğini guncelleme tarihinden alıyoruz.
                         const donusSaati = new Date(personel.guncelleme); 
                         const [hours, minutes] = personel.donus.split(':');
-                        // Saati ve dakikayı ayarlıyoruz.
                         donusSaati.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-                        // Eğer şu anki zaman, izin girilen günün dönüş saatini geçtiyse temizle.
                         if (now > donusSaati) {
                             personel.durum = 'işyerinde';
                             personel.neden = '';
@@ -275,33 +271,30 @@
                         }
                     }
                 });
-
-                if (updated) {
-                    // Veri güncellendiyse listeyi tekrar render etmeye gerek yok,
-                    // firebase 'on' listener zaten tetiklenecek.
-                }
             };
             
             // Firebase'den veriyi anlık olarak dinle
             personelRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    // Firebase'den gelen veriyi 'id' ile bir nesneye dönüştürüyoruz.
                     const personelDataObject = {};
                     Object.values(data).forEach(p => {
                         personelDataObject[p.id] = p;
                     });
                     
                     personelData = Object.values(personelDataObject);
-                    renderLists();
-                    checkAndUpdateExpiredLeaves(personelDataObject);
+                    if (!aktifPersonelId) { // Sadece düzenleme modu kapalıyken render et ve kontrol yap
+                        renderLists();
+                        checkAndUpdateExpiredLeaves(personelDataObject);
+                    }
                 } else {
                     // Firebase'de veri yoksa başlangıç verilerini yükle
                     const initialData = getInitialData();
-                    personelRef.set(initialData.reduce((obj, p) => {
+                    const dataToSet = initialData.reduce((obj, p) => {
                         obj[p.id] = p;
                         return obj;
-                    }, {}));
+                    }, {});
+                    personelRef.set(dataToSet);
                 }
             });
 
@@ -469,6 +462,19 @@
                              hataMesajiKonteyneri.textContent = 'Lütfen dönüş saatini seçin.';
                              return;
                         }
+                        
+                        // --- YENİ EKLENEN KONTROL ---
+                        const now = new Date();
+                        const selectedTime = new Date();
+                        const [hours, minutes] = donusDegeri.split(':');
+                        selectedTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+                        if (selectedTime < now) {
+                            hataMesajiKonteyneri.textContent = 'Geçmiş bir saat seçilemez.';
+                            return;
+                        }
+                        // --- KONTROL SONU ---
+
                     } else if (tip === 'gun') {
                         if (!donusDegeri) {
                             hataMesajiKonteyneri.textContent = 'Lütfen işe başlama tarihini seçin.';
@@ -507,12 +513,13 @@
             updateClock();
             setInterval(updateClock, 1000);
             setInterval(() => {
-                // Bu fonksiyonun doğru çalışması için personel verisini 'id' ile erişilebilir bir formatta göndermeliyiz.
                 const personelDataObject = personelData.reduce((acc, curr) => {
                     acc[curr.id] = curr;
                     return acc;
                 }, {});
-                checkAndUpdateExpiredLeaves(personelDataObject);
+                if (Object.keys(personelDataObject).length > 0) {
+                   checkAndUpdateExpiredLeaves(personelDataObject);
+                }
             }, 60000);
         });
     </script>
