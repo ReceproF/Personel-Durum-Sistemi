@@ -130,15 +130,24 @@
         document.addEventListener('DOMContentLoaded', () => {
             const STORAGE_KEY = 'personelDurumVerisi';
 
-            // Veriyi localStorage'a kaydetme fonksiyonu
+            // Veriyi localStorage'a kaydetme fonksiyonu (Hata yakalama eklendi)
             const saveData = (data) => {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error("localStorage'a kaydedilemedi:", e);
+                }
             };
 
-            // Veriyi localStorage'dan yükleme fonksiyonu
+            // Veriyi localStorage'dan yükleme fonksiyonu (Hata yakalama eklendi)
             const loadData = () => {
-                const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : null;
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    return data ? JSON.parse(data) : null;
+                } catch (e) {
+                    console.error("localStorage'dan yüklenemedi:", e);
+                    return null;
+                }
             };
 
             // Eğer localStorage boşsa kullanılacak başlangıç verisi
@@ -168,10 +177,6 @@
                 personelData = getInitialData();
                 saveData(personelData);
             }
-
-            // Veriyi gruplara ayır
-            const idariBirimData = personelData.filter(p => p.id >= 1 && p.id < 100);
-            const akademikListeData = personelData.filter(p => p.id >= 101);
 
             const mainContainer = document.getElementById('person-lists');
             const confirmationModal = document.getElementById('confirmation-modal');
@@ -237,6 +242,10 @@
                 
                 idariContainer.innerHTML = '';
                 akademikContainer.innerHTML = '';
+                
+                // Filtrelemeyi her render'da yeniden yap
+                const idariBirimData = personelData.filter(p => p.id >= 1 && p.id < 100);
+                const akademikListeData = personelData.filter(p => p.id >= 101);
 
                 idariBirimData.forEach(p => idariContainer.appendChild(createPersonCard(p)));
                 akademikListeData.forEach(p => akademikContainer.appendChild(createPersonCard(p)));
