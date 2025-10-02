@@ -463,7 +463,6 @@
                              return;
                         }
                         
-                        // --- YENİ EKLENEN KONTROL ---
                         const now = new Date();
                         const selectedTime = new Date();
                         const [hours, minutes] = donusDegeri.split(':');
@@ -473,7 +472,6 @@
                             hataMesajiKonteyneri.textContent = 'Geçmiş bir saat seçilemez.';
                             return;
                         }
-                        // --- KONTROL SONU ---
 
                     } else if (tip === 'gun') {
                         if (!donusDegeri) {
