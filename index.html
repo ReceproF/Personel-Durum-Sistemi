@@ -128,8 +128,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Yeni personel verileri gruplara ayrıldı
-            const idariBirimData = [
+            const STORAGE_KEY = 'personelDurumVerisi';
+
+            // Veriyi localStorage'a kaydetme fonksiyonu
+            const saveData = (data) => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            };
+
+            // Veriyi localStorage'dan yükleme fonksiyonu
+            const loadData = () => {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : null;
+            };
+
+            // Eğer localStorage boşsa kullanılacak başlangıç verisi
+            const getInitialData = () => [
                 { id: 1, ad: 'Kadir Mert DÖLEKER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 2, ad: 'Mehmet KURU', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 3, ad: 'Hatice AZTOPAL ÇAVUŞ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
@@ -137,9 +150,6 @@
                 { id: 5, ad: 'İlhami METİN', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 6, ad: 'Hüseyin DAĞ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 7, ad: 'Recep DEMİRCAN', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
-            ];
-
-            const akademikListeData = [
                 { id: 101, ad: 'Perihan AKBAŞ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 102, ad: 'Nalan T. KARAKULLUKÇU', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 103, ad: 'Gülen YEŞİLÖREN AKAL', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
@@ -152,8 +162,16 @@
                 { id: 110, ad: 'Tarık Selçuk ŞEKER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
             ];
             
-            // Tüm personeli kolay arama için tek bir dizide birleştiriyoruz
-            const personelData = [...idariBirimData, ...akademikListeData];
+            // Ana veri kaynağını başlat
+            let personelData = loadData();
+            if (!personelData) {
+                personelData = getInitialData();
+                saveData(personelData);
+            }
+
+            // Veriyi gruplara ayır
+            const idariBirimData = personelData.filter(p => p.id >= 1 && p.id < 100);
+            const akademikListeData = personelData.filter(p => p.id >= 101);
 
             const mainContainer = document.getElementById('person-lists');
             const confirmationModal = document.getElementById('confirmation-modal');
@@ -327,9 +345,12 @@
                     }
                 });
 
-                // Eğer bir güncelleme olduysa ve kimse düzenleme modunda değilse listeyi yenile
-                if (updated && !aktifPersonelId) {
-                    renderLists();
+                // Eğer bir güncelleme olduysa, değişikliği kaydet ve listeyi yenile
+                if (updated) {
+                    saveData(personelData);
+                    if (!aktifPersonelId) {
+                        renderLists();
+                    }
                 }
             };
             
@@ -401,6 +422,7 @@
                     confirmationModal.style.display = 'flex';
                     modalConfirmBtn.onclick = () => {
                         Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null });
+                        saveData(personelData); // Değişikliği kaydet
                         confirmationModal.style.display = 'none';
                         closeAndReset();
                     };
@@ -461,7 +483,7 @@
                         personel.neden = nedenDegeri;
                         personel.donus = finalDonusDegeri;
                         personel.guncelleme = new Date().toISOString();
-                        
+                        saveData(personelData); // Değişikliği kaydet
                         confirmationModal.style.display = 'none';
                         closeAndReset();
                     };
