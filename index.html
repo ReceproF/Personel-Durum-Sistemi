@@ -249,12 +249,11 @@
                     
                     // Saatlik izin kontrolü
                     if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme) {
-                        const updateDate = new Date(personel.guncelleme);
+                        const donusSaati = new Date(personel.guncelleme);
                         const [hours, minutes] = personel.donus.split(':');
-                        const returnTime = new Date(updateDate);
-                        returnTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                        donusSaati.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-                        if (now > returnTime) {
+                        if (now > donusSaati) {
                             personel.durum = 'işyerinde';
                             personel.neden = '';
                             personel.donus = null;
