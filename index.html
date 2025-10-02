@@ -248,8 +248,8 @@
                     const personel = data[id];
                     
                     // Saatlik izin kontrolü
-                    if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme) {
-                        const donusSaati = new Date(personel.guncelleme);
+                    if (personel.durum === 'saatlik-izin' && personel.donus) {
+                        const donusSaati = new Date();
                         const [hours, minutes] = personel.donus.split(':');
                         donusSaati.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
@@ -455,32 +455,28 @@
                     
                     hataMesajiKonteyneri.textContent = '';
 
-                    if (!nedenDegeri && !donusDegeri) {
-                        hataMesajiKonteyneri.textContent = 'Lütfen tüm alanları doldurun.';
-                        return;
-                    }
                     if (!nedenDegeri) {
                         hataMesajiKonteyneri.textContent = 'Lütfen izin nedenini belirtin.';
                         return;
                     }
-                    if (!donusDegeri) {
-                        hataMesajiKonteyneri.textContent = tip === 'saatlik' ? 'Lütfen dönüş saatini seçin.' : 'Lütfen işe başlama tarihini seçin.';
-                        return;
-                    }
-                    
-                    let finalDonusDegeri = donusDegeri;
 
-                    if (tip === 'gun') {
+                    if (tip === 'saatlik') {
+                        if (!donusDegeri) {
+                             hataMesajiKonteyneri.textContent = 'Lütfen dönüş saatini seçin.';
+                             return;
+                        }
+                    } else if (tip === 'gun') {
+                        if (!donusDegeri) {
+                            hataMesajiKonteyneri.textContent = 'Lütfen işe başlama tarihini seçin.';
+                            return;
+                        }
                         const enteredDate = new Date(donusDegeri + 'T00:00:00');
-                        
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
-
                         if (enteredDate < today) {
                             hataMesajiKonteyneri.textContent = 'Geçmiş bir tarih seçilemez.';
                             return;
                         }
-
                         const currentYear = new Date().getFullYear();
                         const enteredYear = enteredDate.getFullYear();
                         if (enteredYear > currentYear + 1) {
@@ -495,7 +491,7 @@
                         personelRef.child(personel.id).update({
                             durum: tip === 'gun' ? 'gun-izni' : 'saatlik-izin',
                             neden: nedenDegeri,
-                            donus: finalDonusDegeri,
+                            donus: donusDegeri,
                             guncelleme: new Date().toISOString()
                         });
                         confirmationModal.style.display = 'none';
