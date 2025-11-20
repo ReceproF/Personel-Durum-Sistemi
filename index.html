@@ -206,19 +206,22 @@
                 return `Güncelleme: ${tarih.toLocaleDateString('tr-TR', opsiyonlar)}`;
             };
 
-            // Tarihleri alıp bir diziye çeviren yardımcı fonksiyon
             const getDatesInRange = (startDate, endDate) => {
-                const date = new Date(startDate);
+                const start = new Date(startDate);
+                start.setHours(12, 0, 0, 0);
                 const end = new Date(endDate);
+                end.setHours(12, 0, 0, 0);
+                
                 const dates = [];
-                while (date <= end) {
-                    dates.push(new Date(date));
-                    date.setDate(date.getDate() + 1);
+                let currentDate = new Date(start);
+
+                while (currentDate <= end) {
+                    dates.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
                 }
                 return dates;
             };
 
-            // Personel kartı oluşturan yardımcı fonksiyon
             const createPersonCard = (p) => {
                 const personCard = document.createElement('div');
                 personCard.className = `person-item bg-white p-4 rounded-lg shadow-sm border-l-4 transition-all duration-300 ${aktifPersonelId && aktifPersonelId !== p.id ? 'disabled' : ''}`;
@@ -231,19 +234,16 @@
                     borderColor = 'border-yellow-500';
                     
                     let cardsHtml = '';
-                    let baslikHtml = '';
                     const today = new Date();
-                    today.setHours(0,0,0,0);
+                    today.setHours(12,0,0,0);
                     const tomorrow = new Date(today);
                     tomorrow.setDate(tomorrow.getDate() + 1);
 
                     if (p.saatlik_baslangic && p.saatlik_bitis) {
                         const dates = getDatesInRange(p.saatlik_baslangic, p.saatlik_bitis);
-                        // Hafta sonlarını (Pazar:0, Cumartesi:6) filtrele
                         const validDates = dates.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
                         
                         if (validDates.length > 0) {
-                            // Başlık metnini belirle
                             const baslikMetni = validDates.length > 1 ? "İşe Geliş Saatleri" : "İşe Geliş Saati";
                             
                             cardsHtml = `<div class="flex flex-col items-center w-full">`;
@@ -258,8 +258,9 @@
                                 const dayNum = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); // 21 Kas
                                 
                                 let displayDayName = dayName;
-                                if (date.getTime() === today.getTime()) displayDayName = "Bugün";
-                                else if (date.getTime() === tomorrow.getTime()) displayDayName = "Yarın";
+                                const dateTime = date.getTime();
+                                if (dateTime === today.getTime()) displayDayName = "Bugün";
+                                else if (dateTime === tomorrow.getTime()) displayDayName = "Yarın";
 
                                 cardsHtml += `
                                     <div class="flex flex-col items-center justify-between bg-yellow-50 border border-yellow-200 rounded-md p-1 min-w-[60px] h-[70px] text-center shadow-sm shrink-0">
@@ -297,7 +298,7 @@
                 
                 personCard.classList.add(borderColor);
                 personCard.innerHTML = `
-                    <div class="flex items-center justify-between min-h-[80px]"> <!-- Yükseklik arttırıldı -->
+                    <div class="flex items-center justify-between min-h-[80px]">
                         <h2 class="text-xl font-bold text-gray-800 whitespace-nowrap">${p.ad}</h2>
                         <div class="status-display flex-1 pl-4 flex justify-end">${durumHtml}</div>
                     </div>
@@ -305,7 +306,6 @@
                 return personCard;
             };
 
-            // Her iki listeyi de render eden fonksiyon
             const renderLists = () => {
                 const idariContainer = document.getElementById('idari-birim-list');
                 const akademikContainer = document.getElementById('akademik-liste');
@@ -344,7 +344,6 @@
                 const defaultStart = personel.saatlik_baslangic || today;
                 const defaultEnd = personel.saatlik_bitis || today;
 
-
                 formContainer.innerHTML = `
                     <div class="bg-gray-50 p-4 rounded-md">
                         <div class="flex flex-col md:flex-row gap-6">
@@ -356,13 +355,18 @@
                                 <!-- Tarih Aralığı Seçimi -->
                                 <div class="flex gap-2">
                                     <div class="flex-1">
-                                        <label class="text-xs text-gray-500 block mb-1">Başlangıç</label>
-                                        <input type="date" id="saatlik-baslangic-${aktifPersonelId}" value="${defaultStart}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                                        <label class="text-xs text-gray-500 block mb-1 font-medium">Başlangıç Günü</label>
+                                        <input type="date" id="saatlik-baslangic-${aktifPersonelId}" value="${defaultStart}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 cursor-pointer">
                                     </div>
                                     <div class="flex-1">
-                                        <label class="text-xs text-gray-500 block mb-1">Bitiş</label>
-                                        <input type="date" id="saatlik-bitis-${aktifPersonelId}" value="${defaultEnd}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                                        <label class="text-xs text-gray-500 block mb-1 font-medium">Bitiş Günü</label>
+                                        <input type="date" id="saatlik-bitis-${aktifPersonelId}" value="${defaultEnd}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 cursor-pointer">
                                     </div>
+                                </div>
+                                
+                                <!-- Seçilen Gün Sayısı Göstergesi -->
+                                <div class="flex justify-center mt-1">
+                                     <div id="gun-sayisi-bilgisi-${aktifPersonelId}" class="text-xs font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full hidden"></div>
                                 </div>
 
                                 <!-- Custom Time Picker Wrapper -->
@@ -402,6 +406,47 @@
                             <button class="kapat-btn text-sm text-gray-600 hover:text-gray-900">Vazgeç</button>
                         </div>
                     </div>`;
+                
+                // Gün sayısı hesaplama mantığını ekle
+                const sInput = document.getElementById(`saatlik-baslangic-${aktifPersonelId}`);
+                const eInput = document.getElementById(`saatlik-bitis-${aktifPersonelId}`);
+                const infoDiv = document.getElementById(`gun-sayisi-bilgisi-${aktifPersonelId}`);
+
+                const updateDayInfo = () => {
+                    const sVal = sInput.value;
+                    const eVal = eInput.value;
+                    const s = new Date(sVal);
+                    const e = new Date(eVal);
+                    const nowStr = new Date().toISOString().split('T')[0];
+                    
+                    if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && s <= e) {
+                        // Saatleri sıfırla
+                        s.setHours(0,0,0,0);
+                        e.setHours(0,0,0,0);
+                        
+                        const diffTime = Math.abs(e - s);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+                        
+                        let message = `${diffDays} gün için seçtiniz`;
+                        if (diffDays === 1) {
+                            if (sVal === nowStr) {
+                                message = "Bugün için seçtiniz";
+                            } else {
+                                message = "1 gün için seçtiniz";
+                            }
+                        }
+
+                        infoDiv.textContent = message;
+                        infoDiv.classList.remove('hidden');
+                    } else {
+                        infoDiv.classList.add('hidden');
+                    }
+                };
+
+                sInput.addEventListener('change', updateDayInfo);
+                eInput.addEventListener('change', updateDayInfo);
+                // İlk açılışta çalıştır
+                updateDayInfo();
             });
             
             const closeAndReset = () => {
@@ -417,7 +462,6 @@
                 let updated = false;
 
                 personelData.forEach(personel => {
-                    // Saatlik izin kontrolü
                     if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme && personel.saatlik_bitis) {
                         if (todayStr > personel.saatlik_bitis) {
                             Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null, saatlik_baslangic: null, saatlik_bitis: null });
@@ -434,7 +478,6 @@
                              }
                         }
                     } 
-                    // Gün izni kontrolü
                     else if (personel.durum === 'gun-izni' && personel.donus) {
                         const returnDate = new Date(personel.donus + 'T00:00:00');
                         const today = new Date();
