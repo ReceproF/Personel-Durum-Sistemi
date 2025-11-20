@@ -172,7 +172,7 @@
                 { id: 106, ad: 'Yunus GEDİK', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 107, ad: 'Esra SATILMIŞ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 108, ad: 'Doğanay YILDIZ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
-                { id: 109, ad: 'Merve ABACI', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
+                { id: 109, ad: 'Merve ARABACI', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 110, ad: 'Tarık Selçuk ŞEKER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
             ];
             
@@ -180,6 +180,14 @@
             if (!personelData) {
                 personelData = getInitialData();
                 saveData(personelData);
+            } else {
+                // LocalStorage'dan gelen veride isim güncellemesi gerekebilir diye kontrol ediyoruz
+                // Eğer eski isim kayıtlıysa yenisiyle değiştiriyoruz
+                const merveIndex = personelData.findIndex(p => p.id === 109);
+                if (merveIndex !== -1 && personelData[merveIndex].ad !== 'Merve ARABACI') {
+                    personelData[merveIndex].ad = 'Merve ARABACI';
+                    saveData(personelData);
+                }
             }
 
             const mainContainer = document.getElementById('person-lists');
@@ -249,7 +257,6 @@
                             cardsHtml = `<div class="flex flex-col items-center w-full">`;
                             cardsHtml += `<span class="text-sm font-bold text-red-600 mb-1 text-center w-full block">${baslikMetni}</span>`;
                             
-                            // Mobilde ortalamak için justify-center kaldırıldı, px-2 eklendi
                             cardsHtml += `<div class="flex gap-2 overflow-x-auto hide-scrollbar py-1 px-2 w-full">`;
                             
                             validDates.forEach(date => {
