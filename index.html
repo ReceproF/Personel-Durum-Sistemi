@@ -4,31 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personel Durum Sistemi</title>
+    <!-- Tailwind CSS'i projeye dahil ediyoruz -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Modern ve okunaklı bir font olan Inter'i kullanıyoruz -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Sayfanın temel yazı tipini belirliyoruz */
         body {
             font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+        /* Seçili olmayan ve pasif hale getirilen personel kartları için stil */
         .person-item.disabled {
             opacity: 0.5;
             pointer-events: none;
-            background-color: #f3f4f6;
+            background-color: #f3f4f6; /* gray-100 */
         }
+        /* Geçiş efektleri için */
         .transition-all {
             transition: all 0.3s ease-in-out;
         }
+        /* Aktif olarak düzenlenen kişinin ismini vurgulamak için stil */
         .aktif-isim {
-            background-color: #dbeafe;
-            color: #1e40af;
+            background-color: #dbeafe; /* blue-100 */
+            color: #1e40af; /* blue-800 */
             padding: 2px 8px;
             border-radius: 6px;
             display: inline-block;
         }
+        /* Yatay kaydırma çubuğunu gizle (daha şık görünüm için) */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Onaylama Modalı Stilleri */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -50,6 +65,7 @@
             width: 400px;
             text-align: center;
         }
+        /* Özel Saat Seçici Stilleri */
         .time-picker-option {
             cursor: pointer;
             padding: 6px 12px;
@@ -57,12 +73,13 @@
             text-align: center;
         }
         .time-picker-option:hover {
-            background-color: #f3f4f6;
+            background-color: #f3f4f6; /* gray-100 */
         }
         .time-picker-option.selected {
-            background-color: #3b82f6;
+            background-color: #3b82f6; /* blue-500 */
             color: white;
         }
+        /* Tarayıcının tarih girdisi için bazı stiller */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             opacity: 0.6;
@@ -74,9 +91,11 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
+    <!-- Ana İçerik Alanı -->
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-8">
             <div class="sm:relative">
+                <!-- Canlı Saat Alanı (Mobil için yukarıda, geniş ekran için sağ üstte) -->
                 <div id="live-clock" class="mb-4 sm:mb-0 sm:absolute sm:top-0 sm:right-0 text-sm sm:text-base text-gray-500 bg-white px-3 py-2 rounded-lg shadow-sm">
                     Yükleniyor...
                 </div>
@@ -85,20 +104,24 @@
             </div>
         </header>
 
+        <!-- Personel Listelerinin Gösterileceği Alan -->
         <main id="person-lists" class="space-y-8 max-w-4xl mx-auto">
             <div>
                 <h2 class="text-2xl font-semibold mb-4 text-cyan-700 border-b-2 border-cyan-200 pb-2">İdari Personel</h2>
                 <div id="idari-birim-list" class="space-y-4">
+                    <!-- İdari Birim kartları JavaScript ile buraya eklenecek -->
                 </div>
             </div>
             <div>
                 <h2 class="text-2xl font-semibold mb-4 text-purple-700 border-b-2 border-purple-200 pb-2">Akademik Personel</h2>
                 <div id="akademik-liste" class="space-y-4">
+                    <!-- Akademik Liste kartları JavaScript ile buraya eklenecek -->
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- Onaylama Modalı (Varsayılan olarak gizli) -->
     <div id="confirmation-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h3 id="modal-title" class="text-lg font-bold mb-4">İşlemi Onayla</h3>
@@ -111,29 +134,28 @@
     </div>
 
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // Firebase konfigürasyonunuz
-            const firebaseConfig = {
-                apiKey: "AIzaSyBArO2jO3W0wZt-lsPMTPk4KN8Kd9NHUhU",
-                authDomain: "personeldurumistemi.firebaseapp.com",
-                databaseURL: "https://personeldurumistemi-default-rtdb.firebaseio.com",
-                projectId: "personeldurumistemi",
-                storageBucket: "personeldurumistemi.firebasestorage.app",
-                messagingSenderId: "356887995499",
-                appId: "1:356887995499:web:d4d8de49de6cac5a447d2e"
+            const STORAGE_KEY = 'personelDurumVerisi';
+
+            const saveData = (data) => {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error("localStorage'a kaydedilemedi:", e);
+                }
             };
 
-            // Firebase'i başlat
-            firebase.initializeApp(firebaseConfig);
-            const database = firebase.database();
-            const personelRef = database.ref('personel');
+            const loadData = () => {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    return data ? JSON.parse(data) : null;
+                } catch (e) {
+                    console.error("localStorage'dan yüklenemedi:", e);
+                    return null;
+                }
+            };
 
-            // Başlangıç verisi
             const getInitialData = () => [
                 { id: 1, ad: 'Kadir Mert DÖLEKER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 2, ad: 'Mehmet KURU', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
@@ -150,19 +172,24 @@
                 { id: 106, ad: 'Yunus GEDİK', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 107, ad: 'Esra SATILMIŞ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 108, ad: 'Doğanay YILDIZ', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
-                { id: 109, ad: 'Merve ARABACI', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
+                { id: 109, ad: 'Merve ABACI YİĞİTER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
                 { id: 110, ad: 'Tarık Selçuk ŞEKER', durum: 'işyerinde', neden: '', donus: null, guncelleme: null },
             ];
             
-            let personelData = [];
-            let aktifPersonelId = null;
-            let selectedHour = null;
-            let selectedMinute = null;
+            let personelData = loadData();
+            if (!personelData) {
+                personelData = getInitialData();
+                saveData(personelData);
+            }
 
             const mainContainer = document.getElementById('person-lists');
             const confirmationModal = document.getElementById('confirmation-modal');
             const modalText = document.getElementById('modal-text');
             const modalConfirmBtn = document.getElementById('modal-confirm');
+            
+            let aktifPersonelId = null;
+            let selectedHour = null;
+            let selectedMinute = null;
 
             const updateClock = () => {
                 const now = new Date();
@@ -178,7 +205,19 @@
                 const opsiyonlar = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
                 return `Güncelleme: ${tarih.toLocaleDateString('tr-TR', opsiyonlar)}`;
             };
-            
+
+            // Tarihleri alıp bir diziye çeviren yardımcı fonksiyon
+            const getDatesInRange = (startDate, endDate) => {
+                const date = new Date(startDate);
+                const end = new Date(endDate);
+                const dates = [];
+                while (date <= end) {
+                    dates.push(new Date(date));
+                    date.setDate(date.getDate() + 1);
+                }
+                return dates;
+            };
+
             // Personel kartı oluşturan yardımcı fonksiyon
             const createPersonCard = (p) => {
                 const personCard = document.createElement('div');
@@ -186,32 +225,87 @@
                 personCard.dataset.id = p.id;
 
                 let durumHtml = '';
-                let borderColor = 'border-gray-300'; // Varsayılan kenarlık rengi
+                let borderColor = 'border-gray-300';
 
                 if (p.durum === 'saatlik-izin') {
                     borderColor = 'border-yellow-500';
-                    durumHtml = `<div class="text-sm"><p class="font-semibold text-yellow-800">İşe Başlangıç Saati: ${p.donus}</p><p class="text-gray-600 mt-1">${p.neden}</p><p class="text-xs text-gray-400 mt-2">${formatGuncelleme(p.guncelleme)}</p></div>`;
+                    
+                    let cardsHtml = '';
+                    let baslikHtml = '';
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+
+                    if (p.saatlik_baslangic && p.saatlik_bitis) {
+                        const dates = getDatesInRange(p.saatlik_baslangic, p.saatlik_bitis);
+                        // Hafta sonlarını (Pazar:0, Cumartesi:6) filtrele
+                        const validDates = dates.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
+                        
+                        if (validDates.length > 0) {
+                            // Başlık metnini belirle
+                            const baslikMetni = validDates.length > 1 ? "İşe Geliş Saatleri" : "İşe Geliş Saati";
+                            
+                            cardsHtml = `<div class="flex flex-col items-center w-full">`;
+                            // Başlık
+                            cardsHtml += `<span class="text-sm font-bold text-red-600 mb-1 text-center w-full block">${baslikMetni}</span>`;
+                            
+                            // Kartlar Container
+                            cardsHtml += `<div class="flex gap-2 overflow-x-auto hide-scrollbar py-1 justify-center w-full">`;
+                            
+                            validDates.forEach(date => {
+                                const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' }); // Pzt, Sal
+                                const dayNum = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); // 21 Kas
+                                
+                                let displayDayName = dayName;
+                                if (date.getTime() === today.getTime()) displayDayName = "Bugün";
+                                else if (date.getTime() === tomorrow.getTime()) displayDayName = "Yarın";
+
+                                cardsHtml += `
+                                    <div class="flex flex-col items-center justify-between bg-yellow-50 border border-yellow-200 rounded-md p-1 min-w-[60px] h-[70px] text-center shadow-sm shrink-0">
+                                        <span class="text-[10px] font-bold text-yellow-800 uppercase tracking-wider leading-tight">${displayDayName}</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight">${dayNum}</span>
+                                        <div class="mt-1 w-full bg-white rounded border border-yellow-100">
+                                            <span class="text-xs font-bold text-blue-600 block py-0.5">${p.donus}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            cardsHtml += `</div></div>`;
+                        }
+                    }
+
+                    durumHtml = `
+                        <div class="flex flex-col items-end w-full">
+                            <div class="w-full flex justify-end">
+                                ${cardsHtml}
+                            </div>
+                            <p class="text-gray-600 text-xs mt-1 mr-1 text-right">${p.neden}</p>
+                            <p class="text-[10px] text-gray-400 mr-1 text-right">${formatGuncelleme(p.guncelleme)}</p>
+                        </div>
+                    `;
+
                 } else if (p.durum === 'gun-izni') {
                     borderColor = 'border-red-500';
                     const dateParts = p.donus.split('-');
                     const localDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
                     const donusTarihi = localDate.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    durumHtml = `<div class="text-sm"><p class="font-semibold text-red-800">İşe Başlangıç Tarihi: ${donusTarihi}</p><p class="text-gray-600 mt-1">${p.neden}</p><p class="text-xs text-gray-400 mt-2">${formatGuncelleme(p.guncelleme)}</p></div>`;
+                    durumHtml = `<div class="text-sm text-right"><p class="font-semibold text-red-800">İşe Başlangıç Tarihi: ${donusTarihi}</p><p class="text-gray-600 mt-1">${p.neden}</p><p class="text-xs text-gray-400 mt-2">${formatGuncelleme(p.guncelleme)}</p></div>`;
                 } else {
                     durumHtml = ``;
                 }
                 
                 personCard.classList.add(borderColor);
                 personCard.innerHTML = `
-                    <div class="flex items-center justify-between min-h-[40px]">
-                        <h2 class="text-xl font-bold text-gray-800">${p.ad}</h2>
-                        <div class="status-display text-right">${durumHtml}</div>
+                    <div class="flex items-center justify-between min-h-[80px]"> <!-- Yükseklik arttırıldı -->
+                        <h2 class="text-xl font-bold text-gray-800 whitespace-nowrap">${p.ad}</h2>
+                        <div class="status-display flex-1 pl-4 flex justify-end">${durumHtml}</div>
                     </div>
                     <div class="edit-form-container mt-4" style="display: none;"></div>`;
                 return personCard;
             };
 
-            // Firebase'den gelen veriye göre listeleri render eden fonksiyon
+            // Her iki listeyi de render eden fonksiyon
             const renderLists = () => {
                 const idariContainer = document.getElementById('idari-birim-list');
                 const akademikContainer = document.getElementById('akademik-liste');
@@ -225,78 +319,6 @@
                 idariBirimData.forEach(p => idariContainer.appendChild(createPersonCard(p)));
                 akademikListeData.forEach(p => akademikContainer.appendChild(createPersonCard(p)));
             };
-
-            const closeAndReset = () => {
-                aktifPersonelId = null;
-                selectedHour = null;
-                selectedMinute = null;
-                renderLists();
-            };
-
-            const checkAndUpdateExpiredLeaves = (data) => {
-                const now = new Date();
-                let updated = false;
-
-                Object.keys(data).forEach(id => {
-                    const personel = data[id];
-                    
-                    // Saatlik izin kontrolü
-                    if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme) {
-                        const donusSaati = new Date(personel.guncelleme); 
-                        const [hours, minutes] = personel.donus.split(':');
-                        donusSaati.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
-                        if (now > donusSaati) {
-                            personel.durum = 'işyerinde';
-                            personel.neden = '';
-                            personel.donus = null;
-                            personel.guncelleme = null;
-                            personelRef.child(id).set(personel);
-                            updated = true;
-                        }
-                    } 
-                    // Gün izni kontrolü
-                    else if (personel.durum === 'gun-izni' && personel.donus) {
-                        const returnDate = new Date(personel.donus + 'T00:00:00');
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-
-                        if (today >= returnDate) {
-                            personel.durum = 'işyerinde';
-                            personel.neden = '';
-                            personel.donus = null;
-                            personel.guncelleme = null;
-                            personelRef.child(id).set(personel);
-                            updated = true;
-                        }
-                    }
-                });
-            };
-            
-            // Firebase'den veriyi anlık olarak dinle
-            personelRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const personelDataObject = {};
-                    Object.values(data).forEach(p => {
-                        personelDataObject[p.id] = p;
-                    });
-                    
-                    personelData = Object.values(personelDataObject);
-                    if (!aktifPersonelId) { // Sadece düzenleme modu kapalıyken render et ve kontrol yap
-                        renderLists();
-                        checkAndUpdateExpiredLeaves(personelDataObject);
-                    }
-                } else {
-                    // Firebase'de veri yoksa başlangıç verilerini yükle
-                    const initialData = getInitialData();
-                    const dataToSet = initialData.reduce((obj, p) => {
-                        obj[p.id] = p;
-                        return obj;
-                    }, {});
-                    personelRef.set(dataToSet);
-                }
-            });
 
             mainContainer.addEventListener('click', (e) => {
                 const card = e.target.closest('.person-item');
@@ -318,12 +340,32 @@
                 const today = new Date().toISOString().split('T')[0];
                 const maxDate = `${new Date().getFullYear() + 1}-12-31`;
 
+                const personel = personelData.find(p => p.id === aktifPersonelId);
+                const defaultStart = personel.saatlik_baslangic || today;
+                const defaultEnd = personel.saatlik_bitis || today;
+
+
                 formContainer.innerHTML = `
                     <div class="bg-gray-50 p-4 rounded-md">
                         <div class="flex flex-col md:flex-row gap-6">
+                            <!-- Saatlik İzin Formu -->
                             <div class="saatlik-form space-y-3 flex-1">
                                 <h3 class="font-semibold text-lg text-gray-700">Saatlik İzin</h3>
                                 <input type="text" placeholder="İzin nedeni (örn: Hastane)" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" id="saatlik-neden-${aktifPersonelId}">
+                                
+                                <!-- Tarih Aralığı Seçimi -->
+                                <div class="flex gap-2">
+                                    <div class="flex-1">
+                                        <label class="text-xs text-gray-500 block mb-1">Başlangıç</label>
+                                        <input type="date" id="saatlik-baslangic-${aktifPersonelId}" value="${defaultStart}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="text-xs text-gray-500 block mb-1">Bitiş</label>
+                                        <input type="date" id="saatlik-bitis-${aktifPersonelId}" value="${defaultEnd}" min="${today}" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                                    </div>
+                                </div>
+
+                                <!-- Custom Time Picker Wrapper -->
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Dönüş Saati:</label>
                                     <div class="relative w-full custom-time-picker-container">
@@ -331,6 +373,7 @@
                                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 time-picker-trigger cursor-pointer">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
                                         </span>
+                                        <!-- Custom Time Picker Panel -->
                                         <div id="time-picker-panel-${aktifPersonelId}" class="absolute hidden top-full mt-2 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-20 p-2">
                                             <div class="flex gap-2">
                                                 <div id="hours-container-${aktifPersonelId}" class="flex-1 space-y-1 max-h-48 overflow-y-auto"></div>
@@ -342,6 +385,7 @@
                                 <div id="saatlik-hata-${aktifPersonelId}" class="text-xs text-red-600 h-4"></div>
                                 <button data-type="saatlik" class="save-btn w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hover:bg-yellow-600 transition-colors">Kaydet</button>
                             </div>
+                            <!-- Gün İzni Formu -->
                             <div class="gun-form space-y-3 flex-1">
                                 <h3 class="font-semibold text-lg text-gray-700">Gün İzni</h3>
                                 <input type="text" placeholder="İzin nedeni (örn: Yıllık İzin)" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500" id="gun-neden-${aktifPersonelId}">
@@ -360,11 +404,62 @@
                     </div>`;
             });
             
+            const closeAndReset = () => {
+                aktifPersonelId = null;
+                selectedHour = null;
+                selectedMinute = null;
+                renderLists();
+            };
+
+            const checkAndUpdateExpiredLeaves = () => {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                let updated = false;
+
+                personelData.forEach(personel => {
+                    // Saatlik izin kontrolü
+                    if (personel.durum === 'saatlik-izin' && personel.donus && personel.guncelleme && personel.saatlik_bitis) {
+                        if (todayStr > personel.saatlik_bitis) {
+                            Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null, saatlik_baslangic: null, saatlik_bitis: null });
+                            updated = true;
+                        } 
+                        else if (todayStr === personel.saatlik_bitis) {
+                             const [hours, minutes] = personel.donus.split(':');
+                             const returnTime = new Date();
+                             returnTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                             
+                             if (now > returnTime) {
+                                Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null, saatlik_baslangic: null, saatlik_bitis: null });
+                                updated = true;
+                             }
+                        }
+                    } 
+                    // Gün izni kontrolü
+                    else if (personel.durum === 'gun-izni' && personel.donus) {
+                        const returnDate = new Date(personel.donus + 'T00:00:00');
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0); 
+
+                        if (today >= returnDate) {
+                             Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null });
+                            updated = true;
+                        }
+                    }
+                });
+
+                if (updated) {
+                    saveData(personelData);
+                    if (!aktifPersonelId) {
+                        renderLists();
+                    }
+                }
+            };
+            
             document.body.addEventListener('click', (e) => {
                 const target = e.target;
                 
                 if (!target.closest('.custom-time-picker-container')) {
-                    document.querySelectorAll('[id^="time-picker-panel-"]').forEach(p => p.classList.add('hidden'));
+                     document.querySelectorAll('[id^="time-picker-panel-"]').forEach(p => p.classList.add('hidden'));
                 }
 
                 if (target.classList.contains('kapat-btn')) closeAndReset();
@@ -427,12 +522,8 @@
                     modalText.textContent = `${personel.ad} için mevcut izin durumunu temizlemeyi onaylıyor musunuz?`;
                     confirmationModal.style.display = 'flex';
                     modalConfirmBtn.onclick = () => {
-                        personelRef.child(personel.id).update({ 
-                            durum: 'işyerinde', 
-                            neden: '', 
-                            donus: null, 
-                            guncelleme: null 
-                        });
+                        Object.assign(personel, { durum: 'işyerinde', neden: '', donus: null, guncelleme: null, saatlik_baslangic: null, saatlik_bitis: null });
+                        saveData(personelData);
                         confirmationModal.style.display = 'none';
                         closeAndReset();
                     };
@@ -448,43 +539,54 @@
                     const hataMesajiKonteyneri = document.getElementById(`${tip}-hata-${aktifPersonelId}`);
                     
                     const nedenDegeri = nedenInput.value.trim();
-                    const donusDegeri = donusInput.value.trim();
+                    const donusDegeri = donusInput ? donusInput.value.trim() : '';
                     
                     hataMesajiKonteyneri.textContent = '';
 
+                    let startVal = null;
+                    let endVal = null;
+
+                    if (tip === 'saatlik') {
+                         const startInput = document.getElementById(`saatlik-baslangic-${aktifPersonelId}`);
+                         const endInput = document.getElementById(`saatlik-bitis-${aktifPersonelId}`);
+                         startVal = startInput.value;
+                         endVal = endInput.value;
+
+                         if (!startVal || !endVal) {
+                             hataMesajiKonteyneri.textContent = 'Lütfen tarih aralığını seçin.';
+                             return;
+                         }
+                         if (startVal > endVal) {
+                             hataMesajiKonteyneri.textContent = 'Başlangıç tarihi bitiş tarihinden sonra olamaz.';
+                             return;
+                         }
+                    }
+
+                    if (!nedenDegeri && !donusDegeri) {
+                        hataMesajiKonteyneri.textContent = 'Lütfen tüm alanları doldurun.';
+                        return;
+                    }
                     if (!nedenDegeri) {
                         hataMesajiKonteyneri.textContent = 'Lütfen izin nedenini belirtin.';
                         return;
                     }
+                    if (!donusDegeri) {
+                        hataMesajiKonteyneri.textContent = tip === 'saatlik' ? 'Lütfen dönüş saatini seçin.' : 'Lütfen işe başlama tarihini seçin.';
+                        return;
+                    }
+                    
+                    let finalDonusDegeri = donusDegeri;
 
-                    if (tip === 'saatlik') {
-                        if (!donusDegeri) {
-                             hataMesajiKonteyneri.textContent = 'Lütfen dönüş saatini seçin.';
-                             return;
-                        }
-                        
-                        const now = new Date();
-                        const selectedTime = new Date();
-                        const [hours, minutes] = donusDegeri.split(':');
-                        selectedTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
-                        if (selectedTime < now) {
-                            hataMesajiKonteyneri.textContent = 'Geçmiş bir saat seçilemez.';
-                            return;
-                        }
-
-                    } else if (tip === 'gun') {
-                        if (!donusDegeri) {
-                            hataMesajiKonteyneri.textContent = 'Lütfen işe başlama tarihini seçin.';
-                            return;
-                        }
+                    if (tip === 'gun') {
                         const enteredDate = new Date(donusDegeri + 'T00:00:00');
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
+
                         if (enteredDate < today) {
                             hataMesajiKonteyneri.textContent = 'Geçmiş bir tarih seçilemez.';
                             return;
                         }
+
                         const currentYear = new Date().getFullYear();
                         const enteredYear = enteredDate.getFullYear();
                         if (enteredYear > currentYear + 1) {
@@ -496,29 +598,32 @@
                     modalText.textContent = `${personel.ad} için bu değişikliği kaydetmeyi onaylıyor musunuz?`;
                     confirmationModal.style.display = 'flex';
                     modalConfirmBtn.onclick = () => {
-                        personelRef.child(personel.id).update({
-                            durum: tip === 'gun' ? 'gun-izni' : 'saatlik-izin',
-                            neden: nedenDegeri,
-                            donus: donusDegeri,
-                            guncelleme: new Date().toISOString()
-                        });
+                        personel.durum = tip === 'gun' ? 'gun-izni' : 'saatlik-izin';
+                        personel.neden = nedenDegeri;
+                        personel.donus = finalDonusDegeri;
+                        personel.guncelleme = new Date().toISOString();
+                        
+                        if (tip === 'saatlik') {
+                            personel.saatlik_baslangic = startVal;
+                            personel.saatlik_bitis = endVal;
+                        } else {
+                            personel.saatlik_baslangic = null;
+                            personel.saatlik_bitis = null;
+                        }
+
+                        saveData(personelData);
                         confirmationModal.style.display = 'none';
                         closeAndReset();
                     };
                 }
             });
             
+            renderLists();
             updateClock();
             setInterval(updateClock, 1000);
-            setInterval(() => {
-                const personelDataObject = personelData.reduce((acc, curr) => {
-                    acc[curr.id] = curr;
-                    return acc;
-                }, {});
-                if (Object.keys(personelDataObject).length > 0) {
-                   checkAndUpdateExpiredLeaves(personelDataObject);
-                }
-            }, 60000);
+
+            checkAndUpdateExpiredLeaves();
+            setInterval(checkAndUpdateExpiredLeaves, 60000);
         });
     </script>
 </body>
